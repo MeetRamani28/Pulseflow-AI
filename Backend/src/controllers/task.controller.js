@@ -1,6 +1,6 @@
-const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
 const Task = require("../models/task.model");
+const { taskQueue } = require("../queue/taskQueue");
 
 exports.createTask = async (req, res) => {
   try {
@@ -14,38 +14,16 @@ exports.createTask = async (req, res) => {
 
     const newTask = await Task.create(userId, threadId, task);
 
-    try {
-      const aiResponse = await axios.post(
-        `${process.env.AI_SERVICE_URL}/task`,
-        {
-          thread_id: threadId,
-          task: task,
-        },
-      );
+    await taskQueue.add("execute-task", {
+      type: "create",
+      threadId,
+      payload: { task },
+    });
 
-      let status = "completed";
-      let resultText = aiResponse.data.final_response;
-
-      if (aiResponse.data.status === "paused_for_hitl") {
-        status = "paused_for_hitl";
-        resultText = aiResponse.data.message;
-      }
-
-      const updatedTask = await Task.updateStatus(threadId, status, resultText);
-      return res
-        .status(201)
-        .json({ message: "Task processed", task: updatedTask });
-    } catch (aiError) {
-      const errorMessage = aiError.response?.data?.detail || aiError.message;
-      const failedTask = await Task.updateStatus(
-        threadId,
-        "failed",
-        errorMessage,
-      );
-      return res
-        .status(500)
-        .json({ error: "AI Service failed", task: failedTask });
-    }
+    return res.status(201).json({
+      message: "Task queued for execution",
+      task: newTask,
+    });
   } catch (error) {
     console.error("Create Task Error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -62,34 +40,15 @@ exports.resumeTask = async (req, res) => {
         .json({ error: "threadId and boolean approved flag are required." });
     }
 
-    try {
-      const aiResponse = await axios.post(
-        `${process.env.AI_SERVICE_URL}/task/resume`,
-        {
-          thread_id: threadId,
-          approved: approved,
-        },
-      );
+    await Task.updateStatus(threadId, "pending", "Resuming task execution...");
 
-      const updatedTask = await Task.updateStatus(
-        threadId,
-        "completed",
-        aiResponse.data.final_response,
-      );
-      return res
-        .status(200)
-        .json({ message: "Task resumed", task: updatedTask });
-    } catch (aiError) {
-      const errorMessage = aiError.response?.data?.detail || aiError.message;
-      const failedTask = await Task.updateStatus(
-        threadId,
-        "failed",
-        errorMessage,
-      );
-      return res
-        .status(500)
-        .json({ error: "AI Service failed during resume", task: failedTask });
-    }
+    await taskQueue.add("resume-task", {
+      type: "resume",
+      threadId,
+      payload: { approved },
+    });
+
+    return res.status(200).json({ message: "Task resume queued" });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
