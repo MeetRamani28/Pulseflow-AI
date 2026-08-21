@@ -2,7 +2,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useSocket } from "../hooks/useSocket";
-import { Send, Clock, CheckCircle2, AlertCircle, Hand } from "lucide-react";
+import {
+  Send,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Hand,
+  Check,
+  X,
+} from "lucide-react";
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
@@ -53,6 +61,31 @@ export default function Dashboard() {
     }
   };
 
+  const handleHitlDecision = async (threadId, approved) => {
+    try {
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.thread_id === threadId
+            ? {
+                ...t,
+                status: "pending",
+                result: "Resuming task execution based on your decision...",
+              }
+            : t,
+        ),
+      );
+
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/tasks/resume`,
+        { threadId, approved },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+    } catch (err) {
+      console.error("Failed to resume task", err);
+      alert("Failed to send approval decision to the server.");
+    }
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case "pending":
@@ -77,7 +110,7 @@ export default function Dashboard() {
             type="text"
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
-            placeholder="e.g., Search the web for recent news on SpaceX and summarize it..."
+            placeholder="e.g., Draft an email to the team about the new server deployment..."
             className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <button
@@ -110,6 +143,23 @@ export default function Dashboard() {
             {task.result && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap">
                 {task.result}
+              </div>
+            )}
+
+            {task.status === "paused_for_hitl" && (
+              <div className="mt-4 flex gap-3 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => handleHitlDecision(task.thread_id, true)}
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium transition-colors"
+                >
+                  <Check className="h-4 w-4" /> Approve Action
+                </button>
+                <button
+                  onClick={() => handleHitlDecision(task.thread_id, false)}
+                  className="flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 font-medium transition-colors"
+                >
+                  <X className="h-4 w-4" /> Reject
+                </button>
               </div>
             )}
           </div>
