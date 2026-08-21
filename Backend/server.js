@@ -2,11 +2,16 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const { setupDatabase } = require("./src/models/db");
+const authRoutes = require("./src/routes/auth.routes");
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/auth", authRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -16,11 +21,17 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(
-    `🚀 Pulseflow Backend Gateway running on http://localhost:${PORT}`,
-  );
-  console.log(
-    `🔗 Configured to route AI tasks to: ${process.env.AI_SERVICE_URL}`,
-  );
-});
+const startServer = async () => {
+  await setupDatabase();
+
+  app.listen(PORT, () => {
+    console.log(
+      `🚀 Pulseflow Backend Gateway running on http://localhost:${PORT}`,
+    );
+    console.log(
+      `🔗 Configured to route AI tasks to: ${process.env.AI_SERVICE_URL}`,
+    );
+  });
+};
+
+startServer();
