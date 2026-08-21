@@ -3,7 +3,8 @@ const cors = require("cors");
 require("dotenv").config();
 
 const { setupDatabase } = require("./src/models/db");
-const authRoutes = require("./src/routes/auth.routes");
+const authRoutes = require('./src/routes/auth.routes');
+const taskRoutes = require('./src/routes/task.routes');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -12,6 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use('/api/tasks', taskRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).json({
