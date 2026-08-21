@@ -3,13 +3,15 @@ from contextlib import asynccontextmanager
 import uvicorn
 from app.config import settings
 from app.memory.db import setup_memory_tables
+from app.memory.vector_store import setup_vector_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle hook that runs before the server starts accepting requests."""
     try:
         setup_memory_tables()
-        print("Successfully initialized LangGraph memory tables.")
+        setup_vector_db()
+        print("Successfully initialized Postgres memory and pgvector tables.")
     except Exception as e:
         print(f"Warning: Could not connect to Postgres (it may not be running yet). Error: {e}")
     yield
@@ -23,7 +25,6 @@ app = FastAPI(
 
 @app.get("/health")
 async def health_check():
-    """Diagnostic endpoint to ensure the AI service is responsive."""
     return {
         "status": "healthy",
         "service": "pulseflow-ai-service",

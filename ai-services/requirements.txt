@@ -11,3 +11,7 @@ asyncpg
 psycopg2-binary
 langgraph-checkpoint-postgres
 psycopg-pool
+sentence-transformers
+pgvector
+langchain-postgres
+langchain-huggingface

@@ -12,7 +12,6 @@ def web_search(query: str) -> str:
     """
     try:
         response = tavily_client.search(query=query, max_results=3)
-        
         results = response.get("results", [])
         if not results:
             return "No relevant results found."
@@ -21,5 +20,3 @@ def web_search(query: str) -> str:
         return "\n".join(snippets)
     except Exception as e:
         return f"Error executing web search: {str(e)}"
-
-AGENT_TOOLS = [web_search]
