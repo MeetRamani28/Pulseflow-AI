@@ -6,3 +6,8 @@ langchain-groq
 tavily-python
 python-dotenv
 pydantic
+sqlalchemy
+asyncpg
+psycopg2-binary
+langgraph-checkpoint-postgres
+psycopg-pool

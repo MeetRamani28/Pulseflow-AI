@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.postgres import PostgresSaver
 
 from app.schemas.state import AgentState
 from app.agents.triage import triage_node
@@ -38,27 +38,15 @@ builder.add_node("executor", execution_node)
 builder.add_node("tools", ToolNode(AGENT_TOOLS))
 
 builder.add_edge(START, "triage")
-
-builder.add_conditional_edges(
-    "triage",
-    route_after_triage,
-    {"hitl": "hitl", "executor": "executor"}
-)
-
-builder.add_conditional_edges(
-    "hitl",
-    route_after_hitl,
-    {"executor": "executor", END: END}
-)
-
-builder.add_conditional_edges(
-    "executor",
-    route_after_executor,
-    {"tools": "tools", END: END}
-)
-
+builder.add_conditional_edges("triage", route_after_triage, {"hitl": "hitl", "executor": "executor"})
+builder.add_conditional_edges("hitl", route_after_hitl, {"executor": "executor", END: END})
+builder.add_conditional_edges("executor", route_after_executor, {"tools": "tools", END: END})
 builder.add_edge("tools", "executor")
 
-memory = InMemorySaver()
-
-app_workflow = builder.compile(checkpointer=memory)
+def get_workflow_with_memory(conn):
+    """
+    Compiles the graph using a live Postgres connection for memory.
+    This replaces the InMemorySaver so states persist across server restarts.
+    """
+    saver = PostgresSaver(conn)
+    return builder.compile(checkpointer=saver)
