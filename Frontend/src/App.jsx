@@ -1,20 +1,17 @@
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useNavigate } from "react-router-dom";
 import { Activity } from "lucide-react";
-
-const Dashboard = () => (
-  <div className="p-8">
-    <h2 className="text-2xl font-bold">Dashboard</h2>
-    <p>Live multi-task AI view coming in Step 17...</p>
-  </div>
-);
-const Login = () => (
-  <div className="p-8">
-    <h2 className="text-2xl font-bold">Login</h2>
-    <p>Auth view...</p>
-  </div>
-);
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
 
 function App() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -26,12 +23,14 @@ function App() {
             </span>
           </Link>
           <nav>
-            <Link
-              to="/login"
-              className="text-sm font-medium text-gray-500 hover:text-gray-900"
-            >
-              Logout
-            </Link>
+            {localStorage.getItem("token") && (
+              <button
+                onClick={handleLogout}
+                className="text-sm font-medium text-gray-500 hover:text-gray-900 cursor-pointer"
+              >
+                Logout
+              </button>
+            )}
           </nav>
         </div>
       </header>
