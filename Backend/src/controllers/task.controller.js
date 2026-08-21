@@ -11,19 +11,18 @@ exports.createTask = async (req, res) => {
       return res.status(400).json({ error: "Task description is required." });
 
     const threadId = uuidv4();
-
     const newTask = await Task.create(userId, threadId, task);
 
     await taskQueue.add("execute-task", {
       type: "create",
       threadId,
+      userId,
       payload: { task },
     });
 
-    return res.status(201).json({
-      message: "Task queued for execution",
-      task: newTask,
-    });
+    return res
+      .status(201)
+      .json({ message: "Task queued for execution", task: newTask });
   } catch (error) {
     console.error("Create Task Error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -33,6 +32,7 @@ exports.createTask = async (req, res) => {
 exports.resumeTask = async (req, res) => {
   try {
     const { threadId, approved } = req.body;
+    const userId = req.user.id;
 
     if (!threadId || typeof approved !== "boolean") {
       return res
@@ -45,6 +45,7 @@ exports.resumeTask = async (req, res) => {
     await taskQueue.add("resume-task", {
       type: "resume",
       threadId,
+      userId,
       payload: { approved },
     });
 

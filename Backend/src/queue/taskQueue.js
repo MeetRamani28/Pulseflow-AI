@@ -2,6 +2,7 @@ const { Queue, Worker } = require("bullmq");
 const Redis = require("ioredis");
 const axios = require("axios");
 const Task = require("../models/task.model");
+const { getIo } = require("../sockets/socket");
 
 const connection = new Redis(
   process.env.REDIS_URL || "redis://localhost:6379",
@@ -15,7 +16,7 @@ const taskQueue = new Queue("ai-tasks", { connection });
 const worker = new Worker(
   "ai-tasks",
   async (job) => {
-    const { type, threadId, payload } = job.data;
+    const { type, threadId, userId, payload } = job.data;
 
     try {
       let aiResponse;
@@ -43,11 +44,29 @@ const worker = new Worker(
         resultText = aiResponse.data.message;
       }
 
-      await Task.updateStatus(threadId, status, resultText);
+      const updatedTask = await Task.updateStatus(threadId, status, resultText);
+
+      try {
+        getIo().to(`user_${userId}`).emit("task_update", updatedTask);
+      } catch (err) {
+        console.error("Socket broadcast failed:", err.message);
+      }
+
       return { status, resultText };
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.message;
-      await Task.updateStatus(threadId, "failed", errorMessage);
+      const failedTask = await Task.updateStatus(
+        threadId,
+        "failed",
+        errorMessage,
+      );
+
+      try {
+        getIo().to(`user_${userId}`).emit("task_update", failedTask);
+      } catch (err) {
+        console.error("Socket broadcast failed:", err.message);
+      }
+
       throw error;
     }
   },

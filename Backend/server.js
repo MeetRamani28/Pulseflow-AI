@@ -1,14 +1,19 @@
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 require("dotenv").config();
 
 const { setupDatabase } = require("./src/models/db");
+const { initSocket } = require("./src/sockets/socket");
 require("./src/queue/taskQueue");
 const authRoutes = require("./src/routes/auth.routes");
 const taskRoutes = require("./src/routes/task.routes");
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 4000;
+
+initSocket(server);
 
 app.use(cors());
 app.use(express.json());
@@ -27,7 +32,7 @@ app.get("/health", (req, res) => {
 const startServer = async () => {
   await setupDatabase();
 
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(
       `🚀 Pulseflow Backend Gateway running on http://localhost:${PORT}`,
     );
